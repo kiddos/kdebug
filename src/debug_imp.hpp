@@ -7,9 +7,27 @@
 
 namespace kdebug{
 
+template <typename Clock>
+dbg_log<Clock>::dbg_log()
+{
+}
+
+template <typename Clock>
+dbg_log<Clock>::dbg_log(typename Clock::rep rep, level l, std::string s)
+{
+    log = std::move(std::make_tuple(rep,l,s));
+}
+
+template <typename Clock>
+std::ostream& operator<<(std::ostream& os, const dbg_log<Clock>& l)
+{
+    os<< "\n["<< std::get<0>(l.log)<< " : "<< std::get<1>(l.log)<<"] "<< std::get<2>(l.log);
+    return os;
+}
+
 template <typename Clock, typename Duration>
 dbg<Clock, Duration>::dbg(std::string unit)
-    : _starttime(Clock::now()), _flag_logged(true), unit(unit) 
+    : _starttime(Clock::now()), _flag_logged(true), unit(unit)
 {
 }
 
@@ -22,7 +40,8 @@ dbg<Clock, Duration>::~dbg()
 }
 
 template <typename Clock, typename Duration>
-dbg<Clock, Duration>& dbg<Clock, Duration>::set_level(level l) {
+dbg<Clock, Duration>& dbg<Clock, Duration>::set_level(level l)
+{
     _level = l;
     std::stringbuf buf;
     std::ostream output(&buf);
@@ -99,7 +118,7 @@ std::string dbg<Clock, Duration>::time()
 {
     const long timepassed = std::chrono::duration_cast<Duration>
         (Clock::now()-_starttime).count();
-    _starttime = Clock::now();
+    //_starttime = Clock::now();
 
     std::stringstream ss;
     ss << timepassed;
@@ -123,11 +142,8 @@ void dbg<Clock, Duration>::list()
 {
     if(!_flag_logged)
         log();
-
     for(auto i = _log.begin() ; i!= _log.end() ; ++i) {
-        std::cout << std::get<0>(*i)
-            << levelstring[std::get<1>(*i)]
-            << " : "<< std::get<2>(*i) <<'\n';
+        std::cout <<*i<<'\n';
     }
 }
 
@@ -156,26 +172,9 @@ typename dbg<Clock, Duration>::log_t dbg<Clock, Duration>::back()
         return _log.back();
     } else {
         std::string empt = "empty";
-        return std::make_tuple(_time, null, empt);
+        return log_t(_time, null, empt);
     }
 }
 
-template <typename Clock>
-dbg_log<Clock>::dbg_log()
-{
-}
-
-template <typename Clock>
-dbg_log<Clock>::dbg_log(typename Clock::rep rep, level l, std::string s)
-{
-    log = std::move(std::make_tuple(rep,l,s));
-}
-
-template <typename Clock>
-std::ostream& operator<<(std::ostream& os, dbg_log<Clock>& l)
-{
-    os<< "["<< std::get<0>(l.log)<< " : "<< std::get<1>(l.log)<<"] "<< std::get<2>(l.log);
-    return os;
-}
 
 }

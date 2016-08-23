@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <iostream>
 
-//using namespace kdebug;
+using namespace kdebug;
 
 int main(){
     std::cout<< kdebug::log.back();
@@ -15,8 +15,8 @@ int main(){
     LOG(warning) << "warning logging";
     LOG(error) << "error logging";
 
-    LOG(file) << "file logging";
-    LOG(file) << "file logging";
+    LOG(file) << "file logging"<<1;
+    LOG(file) << "file logging"<<2;
 
     // std::cout << kdebug::debug.back();
     // std::cout << "test\n";

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <fstream>
 
-
 namespace kdebug {
 
 enum level {
@@ -19,25 +18,22 @@ enum level {
     error
 };
 
-
 template <typename Clock>
-class dbg_log
+struct dbg_log
 {
     dbg_log();
     dbg_log(typename Clock::rep rep, level l, std::string s);
     std::tuple<typename Clock::rep, level, std::string> log;
-    //friend std::ostream& operator<< <Clock>(std::ostream&,dbg_log<Clock>&);
 };
 
 template <typename Clock>
-std::ostream& operator<<(std::ostream&,dbg_log<Clock>&);
+std::ostream& operator<<(std::ostream&, const dbg_log<Clock>&);
 
 template <typename Clock, typename Duration>
 class dbg {
 public:
     using log_t = dbg_log<Clock>;
     using iterator = typename std::list<log_t>::iterator;
-
 
     dbg(std::string unit);
     ~dbg();

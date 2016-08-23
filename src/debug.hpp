@@ -20,11 +20,24 @@ enum level {
 };
 
 
+template <typename Clock>
+class dbg_log
+{
+    dbg_log();
+    dbg_log(typename Clock::rep rep, level l, std::string s);
+    std::tuple<typename Clock::rep, level, std::string> log;
+    //friend std::ostream& operator<< <Clock>(std::ostream&,dbg_log<Clock>&);
+};
+
+template <typename Clock>
+std::ostream& operator<<(std::ostream&,dbg_log<Clock>&);
+
 template <typename Clock, typename Duration>
 class dbg {
 public:
-    typedef std::tuple<typename Clock::rep, level, std::string> log_t;
-    typedef typename std::list<log_t>::iterator iterator;
+    using log_t = dbg_log<Clock>;
+    using iterator = typename std::list<log_t>::iterator;
+
 
     dbg(std::string unit);
     ~dbg();
@@ -55,28 +68,19 @@ private:
 };
 
 // global variables
-typedef dbg<std::chrono::high_resolution_clock,
-            std::chrono::microseconds> Timer;
-typedef dbg<std::chrono::system_clock,
-            std::chrono::milliseconds> Debug;
-typedef dbg<std::chrono::system_clock,
-            std::chrono::seconds> Log;
+using timer_t = dbg<std::chrono::high_resolution_clock, std::chrono::microseconds>;
+using debug_t = dbg<std::chrono::system_clock, std::chrono::milliseconds>;
+using log_t = dbg<std::chrono::system_clock, std::chrono::seconds>;
+
+extern timer_t timer;
+extern debug_t debug;
+extern log_t log;
 
 extern std::map<level, const std::string> levelstring;
-extern Debug debug;
-extern Timer timer;
-extern Log log;
+
 
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         kdebug::Debug::log_t& l);
-
-std::ostream& operator<<(std::ostream& os,
-                         kdebug::Timer::log_t& l);
-
-std::ostream& operator<<(std::ostream& os,
-                         kdebug::Log::log_t& l);
 
 #undef DBG
 #undef TIMER
@@ -92,3 +96,4 @@ std::ostream& operator<<(std::ostream& os,
 #define LOG(level) kdebug::log.set_level(kdebug::null)
 #endif
 
+#include "debug_imp.hpp"

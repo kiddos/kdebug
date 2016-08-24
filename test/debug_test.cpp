@@ -18,7 +18,8 @@ int main(){
     LOG(file) << "file logging"<<1;
     LOG(file) << "file logging"<<2;
 
-    // std::cout << kdebug::debug.back();
+    log.list(std::cout);
+    //std::cout << kdebug::debug.back();
     // std::cout << "test\n";
     return 0;
 }

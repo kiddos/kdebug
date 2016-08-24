@@ -8,40 +8,54 @@
 namespace kdebug{
 
 template <typename Clock>
-dbg_log<Clock>::dbg_log()
-{
+dbg_log<Clock>::dbg_log() {
 }
 
 template <typename Clock>
-dbg_log<Clock>::dbg_log(typename Clock::rep rep, level l, std::string s)
-{
-    log = std::move(std::make_tuple(rep,l,s));
+dbg_log<Clock>::dbg_log(const dbg_log& l) {
+    time = l.time;
+    this->l = l.l;
+    text = l.text;
 }
 
 template <typename Clock>
-std::ostream& operator<<(std::ostream& os, const dbg_log<Clock>& l)
-{
-    os<< "\n["<< std::get<0>(l.log)<< " : "<< std::get<1>(l.log)<<"] "<< std::get<2>(l.log);
+dbg_log<Clock>::dbg_log(dbg_log&& l) {
+    time = l.time;
+    this->l = l.l;
+    text = std::move(l.text);
+}
+
+template <typename Clock>
+dbg_log<Clock>::dbg_log(typename Clock::rep t, level l, std::string s) {
+    time = t;
+    this->l = l;
+    text = s;
+}
+
+template <typename Clock>
+std::ostream& operator<<(std::ostream& os, const dbg_log<Clock>& l) {
+    os<< "\n["<< l.time<< " : "<< levelstring[l.l]<<"] "<< l.text;
     return os;
 }
 
+
+
 template <typename Clock, typename Duration>
 dbg<Clock, Duration>::dbg(std::string unit)
-    : _starttime(Clock::now()), _flag_logged(true), unit(unit)
-{
+    : _starttime(Clock::now()), _flag_logged(true), unit(unit) {
 }
 
 template <typename Clock, typename Duration>
-dbg<Clock, Duration>::~dbg()
-{
+dbg<Clock, Duration>::~dbg() {
     std::cout << std::endl;
     _output_file << '\n';
     if (_output_file.is_open()) _output_file.close();
 }
 
 template <typename Clock, typename Duration>
-dbg<Clock, Duration>& dbg<Clock, Duration>::set_level(level l)
-{
+dbg<Clock, Duration>& dbg<Clock, Duration>::set_level(level l) {
+    if(!_flag_logged)
+        log();
     _level = l;
     std::stringbuf buf;
     std::ostream output(&buf);
@@ -49,73 +63,37 @@ dbg<Clock, Duration>& dbg<Clock, Duration>::set_level(level l)
         << current_timestr()
         << " | " << time() << unit << "]: ";
 
-    switch (_level) {
-        case null:
-            return *this;
-        case file:
-            if (_output_file.is_open()) {
-                _output_file << buf.str();
-            }
-            break;
-        case info:
-        case warning:
-            std::cout << buf.str();
-            break;
-        case error:
-            std::cerr << buf.str();
-            break;
-    }
+    outstream(_level)<<buf.str();
+    _flag_logged=false;
     return *this;
 }
 
 template <typename Clock, typename Duration>
-void dbg<Clock, Duration>::set_fileoutput(const std::string filename)
-{
+void dbg<Clock, Duration>::set_fileoutput(const std::string filename) {
     _output_file.open(filename.c_str(), std::ios::out);
 }
 
 template <typename Clock, typename Duration>
 template<typename T>
-dbg<Clock, Duration> &dbg<Clock, Duration>::operator<< (T t)
-{
+dbg<Clock, Duration> &dbg<Clock, Duration>::operator<< (T t) {
     _ss << t;
-    switch (_level) {
-        case null:
-            return *this;
-            break;
-        case file:
-            if (_output_file.is_open()) {
-                _output_file << t;
-            }
-            break;
-        case info:
-            break;
-        case warning:
-            std::cout << t;
-            break;
-        case error:
-            std::cerr << t;
-            break;
-    }
+    outstream(_level)<<t;
     return *this;
 }
 
 template <typename Clock, typename Duration>
-void dbg<Clock, Duration>::log()
-{
+void dbg<Clock, Duration>::log() {
     std::string s;
-    _ss >> s;
+    std::getline(_ss,s);
 
     _log.push_back(log_t(_time, _level, s));
-    _ss.str(std::string());
     _ss.clear();
     s.clear();
     _flag_logged = true;
 }
 
 template <typename Clock, typename Duration>
-std::string dbg<Clock, Duration>::time()
-{
+std::string dbg<Clock, Duration>::time() {
     const long timepassed = std::chrono::duration_cast<Duration>
         (Clock::now()-_starttime).count();
     //_starttime = Clock::now();
@@ -127,54 +105,70 @@ std::string dbg<Clock, Duration>::time()
 
 
 template <typename Clock, typename Duration>
-std::string dbg<Clock, Duration>::current_timestr()
-{
+std::string dbg<Clock, Duration>::current_timestr() {
     time_t current_time;
     std::time(&current_time);
-    struct tm *time_info = std::localtime(&current_time);
+    std::tm *time_info = std::localtime(&current_time);
     char buffer[1024];
     std::strftime(buffer, 1024, "%m/%d/%y %A %T", time_info);
     return std::string(buffer);
 }
 
 template <typename Clock, typename Duration>
-void dbg<Clock, Duration>::list()
-{
-    if(!_flag_logged)
-        log();
-    for(auto i = _log.begin() ; i!= _log.end() ; ++i) {
-        std::cout <<*i<<'\n';
+void dbg<Clock, Duration>::list(std::ostream& os,level l) {
+    for(auto i = _log.begin() ; i!= _log.end() ; ++i){
+        if(i->l >= l)
+            os<< *i;
     }
 }
 
 template <typename Clock, typename Duration>
-typename dbg<Clock, Duration>::iterator dbg<Clock, Duration>::begin()
-{
+typename dbg<Clock, Duration>::iterator dbg<Clock, Duration>::begin() {
     if(!_flag_logged)
         log();
     return _log.begin();
 }
 
 template <typename Clock, typename Duration>
-typename dbg<Clock, Duration>::iterator dbg<Clock, Duration>::end()
-{
+typename dbg<Clock, Duration>::iterator dbg<Clock, Duration>::end() {
     if(!_flag_logged)
         log();
     return _log.end();
 }
 
 template <typename Clock, typename Duration>
-typename dbg<Clock, Duration>::log_t dbg<Clock, Duration>::back()
-{
+typename dbg<Clock, Duration>::log_t dbg<Clock, Duration>::back() {
     if(!_flag_logged)
         log();
-    if (_log.size() > 0) {
+    if (_log.size() > 0){
         return _log.back();
-    } else {
-        std::string empt = "empty";
-        return log_t(_time, null, empt);
+    }else{
+        return log_t(_time, null, "empty");
     }
 }
 
+template <typename Clock, typename Duration>
+std::ostream& dbg<Clock, Duration>::outstream(level) {
+    switch (_level){
+        case null:
+            break;
+        case file:
+            if (_output_file.is_open()){
+                return _output_file;
+            }
+            break;
+        case info:
+            break;
+        case warning:
+            return std::cout;
+            break;
+        case error:
+            return std::cerr;
+            break;
+        default:
+            break;
+    }
+    return nullout;
+}
 
 }

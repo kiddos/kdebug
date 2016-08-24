@@ -3,7 +3,6 @@
 #include <string>
 #include <list>
 #include <chrono>
-#include <tuple>
 #include <map>
 #include <iostream>
 #include <fstream>
@@ -19,11 +18,14 @@ enum level {
 };
 
 template <typename Clock>
-struct dbg_log
-{
+struct dbg_log {
     dbg_log();
-    dbg_log(typename Clock::rep rep, level l, std::string s);
-    std::tuple<typename Clock::rep, level, std::string> log;
+    dbg_log(const dbg_log&);
+    dbg_log(dbg_log&&);
+    dbg_log(typename Clock::rep, level, std::string);
+    typename Clock::rep time;
+    level l;
+    std::string text;
 };
 
 template <typename Clock>
@@ -41,10 +43,11 @@ public:
     dbg &set_level(level l);
     void set_fileoutput(const std::string filename);
     template<typename T> dbg& operator<<(T t);
+
     std::string time();
     static std::string current_timestr();
     void log();
-    void list();
+    void list(std::ostream&,level l=null);
 
     iterator begin();
     iterator end();
@@ -61,6 +64,8 @@ private:
     std::stringstream _ss;
     std::ofstream _output_file;
     std::list<log_t> _log;
+
+    std::ostream& outstream(level);
 };
 
 // global variables
@@ -74,6 +79,8 @@ extern log_t log;
 
 extern std::map<level, const std::string> levelstring;
 
+
+extern std::ostream nullout;
 
 }
 
